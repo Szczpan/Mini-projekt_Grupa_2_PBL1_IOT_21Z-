@@ -8,8 +8,11 @@ int maxADC = 600;                     // replace with max ADC value read fully s
 bool is1V1Output = false;             // obczaj czy ta wersja co mamy sensora gleby ma 1.1 czy 3V na outpucie 
 int moistureValue, mappedValue;
 int U = 10;                           // prędkość wiatru, ale nie mamy sensora prędkości wiatru, więc ustawiam na średnią prędkość wiatru w Polsce
-int DF, H, T, FFDI;                   // Drought Factor, Humidity, Temperature, Forest Fire Danger Index
+float DF, H, T, FFDI;                   // Drought Factor, Humidity, Temperature, Forest Fire Danger Index
 const int red = 3, yellow = 4, green = 5; // digital pins for LEDs
+const int MQ2 = A1;
+float MQ2value;
+int MQ2_trigger_value = 800;
 
 DHT dht(hum_temp_sens, DHT22);
 
@@ -19,17 +22,28 @@ void setup()
   pinMode(red, OUTPUT);
   pinMode(yellow, OUTPUT);
   pinMode(green, OUTPUT);
+  delay(20000);
 }
 
 void loop() 
 {
+  MQ2value = analogRead(MQ2);
+  Serial.println(MQ2value);
+  if(MQ2value >= MQ2_trigger_value)
+  {
+    digitalWrite(green, 0);
+    digitalWrite(yellow, 0);
+    digitalWrite(red, 0);
+    delay(500); 
+  }
   if(dht.read() == DHT_OK)
   {
     moistureValue = analogRead(soil_moist_sens);
-    DF = map(moistureValue, minADC, maxADC, 0, 10);
+    DF = map(moistureValue, minADC, maxADC, 10, 0);
     H = dht.humidity;
     T = dht.temperature;
     FFDI = 2 * exp( -0.45 + 0.987 * log( DF ) + 0.0338*T - 0.0345*H + 0.0234*U );
+    Serial.println(FFDI);
     if(FFDI <= 5)  // Fire Danger Classification based on Table 3 from "Environmental Modelling & Software 24 (2009) 764–774" J.J. Sharples, R.H.D. McRae, R.O. Weber, A.M. Gill
     {
       digitalWrite(green, 1);
